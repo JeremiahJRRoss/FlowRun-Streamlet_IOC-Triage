@@ -154,7 +154,7 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **HTTP Client**             | httpx 0.27+ (async) — all API calls                                     |
 | **Threat Intel APIs**       | VirusTotal, AbuseIPDB, OTX, urlscan.io, NIST NVD, OSV.dev, npm, PyPI   |
 | **Observability**           | Arize AI via arize-otel + openinference-instrumentation-langchain        |
-| **Language / Runtime**      | Python 3.11+ with asyncio                                               |
+| **Language / Runtime**      | Python 3.11+ (tested on 3.14) with asyncio                              |
 
 
 ## 7. Minimum Requirements
@@ -164,7 +164,7 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **Requirement**      | **Specification**                                                       |
 |----------------------|-------------------------------------------------------------------------|
 | **Operating System** | macOS 12+, Ubuntu 20.04+, or Windows 10+ (via WSL2)                     |
-| **Python Version**   | Python 3.11 or higher                                                   |
+| **Python Version**   | Python 3.11 or higher (tested on 3.14)                                  |
 | **RAM**              | Minimum 4 GB (8 GB recommended)                                         |
 | **Network**          | Outbound HTTPS to api.openai.com, virustotal.com, abuseipdb.com, otx.alienvault.com, urlscan.io, nvd.nist.gov, api.osv.dev, registry.npmjs.org, pypi.org, and app.arize.com |
 

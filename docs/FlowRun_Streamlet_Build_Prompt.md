@@ -37,7 +37,7 @@ A security operations tool that:
 | Tracing protocol | OTLP → Arize AI |
 | Key loading | `python-dotenv` |
 | Notebook widgets | `ipywidgets >= 8.0` |
-| Runtime | Python 3.11+, `asyncio` |
+| Runtime | Python 3.11+ (tested on 3.14), `asyncio` |
 
 **requirements.txt:**
 ```
