@@ -20,7 +20,7 @@ Submit any IOC (IP address, domain, URL, file hash, CVE identifier, or **softwar
 See [QUICK_START.md](QUICK_START.md) for full setup instructions.
 
 ```bash
-python3.11 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate   # Python 3.11 or newer (tested on 3.14)
 pip install -r requirements.txt
 cp .env.template .env   # fill in your API keys
 python flowrun_agent.py  # CLI mode

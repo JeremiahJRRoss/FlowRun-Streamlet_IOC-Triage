@@ -10,7 +10,7 @@ cd flowrun-streamlet-ioc-triage
 ## 2. Create a virtual environment and install dependencies
 
 ```bash
-python3.11 -m venv .venv
+python3 -m venv .venv            # Python 3.11 or newer (tested on 3.14)
 source .venv/bin/activate        # macOS / Linux
 # .venv\Scripts\activate          # Windows
 
