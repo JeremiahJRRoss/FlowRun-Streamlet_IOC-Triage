@@ -14,7 +14,7 @@ def main() -> None:
     print(
         "\n"
         "══════════════════════════════════════════════════════════\n"
-        "  🛡️  FlowRun Streamlet: IoC Triage — v0.0.32\n"
+        "  🛡️  FlowRun Streamlet: IoC Triage — v0.0.33\n"
         "  Built with LangGraph + LangChain + OpenTelemetry\n"
         "══════════════════════════════════════════════════════════\n"
     )

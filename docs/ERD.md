@@ -1,7 +1,7 @@
 # FlowRun Streamlet: IoC Triage — Entity Relationship Diagram
 
 > Rendered automatically by GitHub via [Mermaid](https://mermaid.js.org/).  
-> Every entity maps to a data structure in the live agent pipeline (v0.0.32).  
+> Every entity maps to a data structure in the live agent pipeline (v0.0.33).  
 > Relationships reflect how data flows through the LangGraph `AgentState` and its downstream consumers.
 
 ---
@@ -371,4 +371,4 @@ erDiagram
 
 ---
 
-*FlowRun Streamlet: IoC Triage · ERD v3 · LangGraph + LangChain + OpenAI GPT-4o + OpenTelemetry (Traceloop) · Reconciled with codebase v0.0.32*
+*FlowRun Streamlet: IoC Triage · ERD v3 · LangGraph + LangChain + OpenAI GPT-4o + OpenTelemetry (Traceloop) · Reconciled with codebase v0.0.33*

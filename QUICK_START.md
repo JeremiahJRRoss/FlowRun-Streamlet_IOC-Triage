@@ -1,5 +1,7 @@
 # FlowRun Streamlet: IoC Triage — Quick Start Guide
 
+> **Containerized deployment is the default path** — see [the container Quick Start in README.md](README.md#quick-start-container--default) for the one-command `docker compose up` / `podman compose up` flow. The walkthrough below is for running the CLI or notebook directly on your host.
+
 ## 1. Extract and enter the project
 
 ```bash

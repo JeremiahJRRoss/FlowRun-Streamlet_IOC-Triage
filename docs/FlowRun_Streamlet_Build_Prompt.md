@@ -1,11 +1,11 @@
-# BUILD PROMPT — FlowRun Streamlet: IoC Triage v0.0.32
+# BUILD PROMPT — FlowRun Streamlet: IoC Triage v0.0.33
 ## Complete Engineering Instructions
 
 ---
 
 ## CONTEXT & YOUR MISSION
 
-You are maintaining a working application called **FlowRun Streamlet: IoC Triage**. This document is the single source of truth for the codebase as of v0.0.32. Reference documents: User Manual v3, PRD v3, Architecture v3.
+You are maintaining a working application called **FlowRun Streamlet: IoC Triage**. This document is the single source of truth for the codebase as of v0.0.33. Reference documents: User Manual v3, PRD v3, Architecture v3.
 
 ---
 
@@ -58,7 +58,7 @@ ipywidgets>=8.0
 ## PROJECT FILE STRUCTURE
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.32/
+flowrun-streamlet-ioc-triage-v0.0.33/
 │
 ├── flowrun_agent.py              # CLI entry point
 ├── flowrun_agent.ipynb           # Jupyter Notebook (8 cells)
@@ -292,4 +292,4 @@ Bare package names (no prefix) are scanned across 10 ecosystems simultaneously: 
 
 ---
 
-*FlowRun Streamlet: IoC Triage — Build Prompt v3 — Reconciled with codebase v0.0.32*
+*FlowRun Streamlet: IoC Triage — Build Prompt v3 — Reconciled with codebase v0.0.33*

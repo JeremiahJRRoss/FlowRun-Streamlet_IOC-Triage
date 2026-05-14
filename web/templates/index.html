@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FlowRun Streamlet: IoC Triage</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+</head>
+<body>
+  <header>
+    <h1>🛡️ FlowRun Streamlet: IoC Triage</h1>
+    <p class="subtitle">Automated Threat Intelligence Triage — submit any IOC for an instant verdict.</p>
+  </header>
+
+  <main>
+    <form id="triage-form"
+          hx-post="/triage"
+          hx-target="#result"
+          hx-swap="innerHTML"
+          hx-indicator="#spinner"
+          hx-disabled-elt="#submit-btn">
+      <label for="ioc">Indicator of Compromise</label>
+      <textarea id="ioc"
+                name="ioc"
+                rows="2"
+                placeholder="IP, domain, URL, file hash, CVE-XXXX-NNNNN, or ecosystem:package"
+                autofocus
+                required></textarea>
+      <div class="actions">
+        <button type="submit" id="submit-btn">⚡ Triage</button>
+        <span id="spinner" class="htmx-indicator">⏳ Querying intelligence sources…</span>
+      </div>
+    </form>
+
+    <section id="examples">
+      <strong>Try:</strong>
+      <code class="example" onclick="document.getElementById('ioc').value=this.textContent">8.8.8.8</code>
+      <code class="example" onclick="document.getElementById('ioc').value=this.textContent">44d88612fea8a8f36de82e1278abb02f</code>
+      <code class="example" onclick="document.getElementById('ioc').value=this.textContent">CVE-2021-44228</code>
+      <code class="example" onclick="document.getElementById('ioc').value=this.textContent">npm:postmark-mcp</code>
+    </section>
+
+    <section id="result"></section>
+  </main>
+
+  <footer>
+    <span>OTLP endpoint: <code>{{ trace_endpoint }}</code></span>
+  </footer>
+</body>
+</html>

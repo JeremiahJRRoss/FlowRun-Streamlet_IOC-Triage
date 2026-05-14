@@ -1,0 +1,38 @@
+# compose.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+# Works with: docker compose up   |   podman compose up
+#
+# Single-service stack. The image is built from the local Dockerfile on first
+# run and reused after. Credentials come from .env (see .env.template).
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  flowrun:
+    build: .
+    image: flowrun-streamlet-ioc-triage:0.0.33
+    container_name: flowrun
+    restart: unless-stopped
+    ports:
+      - "7777:7777"
+    env_file:
+      - .env
+    environment:
+      # Default OTLP destination is a collector running on the host. Works on
+      # Docker Desktop out of the box; works on rootless Podman and native
+      # Linux via the extra_hosts entry below (host-gateway is the modern
+      # OCI-standard alias for the host's address). Override or unset to
+      # disable tracing — tracing failure is non-blocking (NFR-07).
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://host.docker.internal:4318"
+      FLOWRUN_NO_PROMPT: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:7777/health').read()"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

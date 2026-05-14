@@ -37,8 +37,10 @@ def resolve_credentials() -> None:
     # Step 2: Identify missing keys (not yet in os.environ)
     missing = [k for k in REQUIRED_KEYS if not os.getenv(k)]
 
-    # Step 3: Interactive prompt for missing keys only
-    if missing:
+    # Step 3: Interactive prompt for missing keys only. Skipped when
+    # FLOWRUN_NO_PROMPT is set (containers, CI, non-interactive runs) so the
+    # process raises a clean error instead of hanging on a getpass() with no TTY.
+    if missing and not os.getenv("FLOWRUN_NO_PROMPT"):
         print("\nSome API keys are missing. Enter them below (input is masked):\n")
         for key in missing:
             value = getpass(f"  {key}: ")
