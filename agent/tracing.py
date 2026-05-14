@@ -70,7 +70,7 @@ def init_tracing(service_name: str | None = None):
             headers=headers,
             resource_attributes={
                 "service.name": app_name,
-                "service.version": "0.0.32",
+                "service.version": "0.0.33",
             },
         )
         return endpoint

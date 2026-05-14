@@ -7,7 +7,7 @@
 |-----------------------|--------------------------------------------------------------|
 | **Document Type**     | Architectural Design Document (ADD)                          |
 | **Product**           | FlowRun Streamlet: IoC Triage                                |
-| **Version**           | v0.0.32 — Reconciled with codebase                          |
+| **Version**           | v0.0.33 — Reconciled with codebase                          |
 | **Agentic Framework** | LangGraph 0.2+ (StateGraph)                                  |
 | **LLM Integration**   | LangChain 0.3+ / OpenAI GPT-4o-mini + GPT-4o                |
 | **Observability**     | OpenTelemetry via Traceloop SDK (OpenLLMetry) over OTLP/HTTP |
@@ -68,7 +68,7 @@ This document describes the internal structure, component design, data flows, an
 ## 4. Project File Structure
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.32/
+flowrun-streamlet-ioc-triage-v0.0.33/
 │
 ├── flowrun_agent.py              # CLI entry point — interactive loop
 ├── flowrun_agent.ipynb           # Jupyter Notebook interface (8 cells)
@@ -384,4 +384,4 @@ No other files change — graph, state, routing, tracing adapt automatically.
 
 ---
 
-*FlowRun Streamlet: IoC Triage — Architecture v3 — Reconciled with codebase v0.0.32*
+*FlowRun Streamlet: IoC Triage — Architecture v3 — Reconciled with codebase v0.0.33*

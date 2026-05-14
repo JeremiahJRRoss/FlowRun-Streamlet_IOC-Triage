@@ -7,7 +7,7 @@
 |-----------------------|--------------------------------------------------------------|
 | **Document Type**     | Product Requirements Document (PRD)                          |
 | **Product Name**      | FlowRun Streamlet: IoC Triage                                |
-| **Version**           | v0.0.32                                                      |
+| **Version**           | v0.0.33                                                      |
 | **Status**            | Active — Reconciled with codebase                            |
 | **Owner**             | Security Platform Engineering                                |
 | **Stakeholders**      | SOC Operations, Security Engineering, Platform Observability |
@@ -26,7 +26,7 @@ The FlowRun Streamlet: IoC Triage is an AI-powered security operations tool that
 | **Agentic Framework**   | LangGraph 0.2+ (StateGraph with conditional routing)                                     |
 | **LLM**                 | OpenAI GPT-4o-mini (classification) + GPT-4o (report synthesis) via LangChain            |
 | **Observability**       | OpenTelemetry with Traceloop SDK (OpenLLMetry) auto-instrumentation, OTLP/HTTP export    |
-| **Deployment Target**   | Local CLI + Jupyter Notebook (v0.0.32); REST API (v2.0 roadmap)                          |
+| **Deployment Target**   | Local CLI + Jupyter Notebook (v0.0.33); REST API (v2.0 roadmap)                          |
 | **IOC Types Supported** | IP, Domain, URL, File Hash (MD5/SHA-1/SHA-256), CVE, Package, Package Multi-Scan         |
 
 
@@ -51,7 +51,7 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **G-06** | Ensure zero hardcoded credentials — all keys managed via secure runtime injection      |
 | **G-07** | Detect malicious software packages across 27 ecosystems via OSV.dev                   |
 
-**2.3 Non-Goals (v0.0.32)**
+**2.3 Non-Goals (v0.0.33)**
 
 - No REST API or web UI — CLI and Jupyter only
 - No SIEM integration (Splunk, Sentinel, etc.) — planned for v2.0
@@ -388,4 +388,4 @@ Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass()
 
 ---
 
-*FlowRun Streamlet: IoC Triage — PRD v3 — Reconciled with codebase v0.0.32*
+*FlowRun Streamlet: IoC Triage — PRD v3 — Reconciled with codebase v0.0.33*

@@ -2,7 +2,7 @@
 > **User Manual & Technical Reference**
 > Automated Threat Intelligence Triage for Security Operations
 
-| **Version** v0.0.32 | **Framework** LangChain + LangGraph |
+| **Version** v0.0.33 | **Framework** LangChain + LangGraph |
 |---|---|
 | **Status** Active Release | **Observability** OpenTelemetry (Traceloop / OpenLLMetry) |
 
@@ -249,4 +249,4 @@ pip install notebook ipykernel langgraph langchain langchain-openai openai httpx
 
 ---
 
-*FlowRun Streamlet: IoC Triage — User Manual v3 — Reconciled with codebase v0.0.32*
+*FlowRun Streamlet: IoC Triage — User Manual v3 — Reconciled with codebase v0.0.33*

@@ -1,4 +1,4 @@
-# 🛡️ FlowRun Streamlet: IoC Triage — v0.0.32
+# 🛡️ FlowRun Streamlet: IoC Triage — v0.0.33
 
 Automated Threat Intelligence Triage for Security Operations.
 
@@ -15,9 +15,43 @@ Submit any IOC (IP address, domain, URL, file hash, CVE identifier, or **softwar
 5. Generate a structured threat report with recommended actions
 6. Stream a full execution trace via OpenTelemetry (OTLP/HTTP) to the configured collector for observability
 
-## Quick Start
+## Quick Start (Container — Default)
 
-See [QUICK_START.md](QUICK_START.md) for full setup instructions.
+The default deployment is a container image with a small web UI on **port 7777**. Works identically with Docker or Podman.
+
+### 1. Prepare credentials
+```bash
+cp .env.template .env   # then fill in the 5 required API keys
+```
+
+### 2. Start the stack
+
+**Docker:**
+```bash
+docker compose up -d --build
+```
+
+**Podman:**
+```bash
+podman compose up -d --build
+```
+
+Either command builds the image on first run and starts the agent. Open <http://localhost:7777>.
+
+### 3. Use the UI
+Paste any IOC (IP, domain, URL, file hash, CVE, package) into the input field and click **Triage**. The full threat report renders inline below the form.
+
+### 4. Stop the stack
+```bash
+docker compose down       # or: podman compose down
+```
+
+### Tracing
+By default the container ships OpenTelemetry spans to `http://host.docker.internal:4318` — your host machine's local OTLP/HTTP collector port. If no collector is running, tracing fails silently and triage continues normally. To target a different endpoint, set `OTEL_EXPORTER_OTLP_ENDPOINT` in your `.env`.
+
+## Run Without a Container
+
+The CLI and Jupyter notebook continue to work for local development:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate   # Python 3.11 or newer (tested on 3.14)
@@ -34,6 +68,8 @@ jupyter notebook flowrun_agent.ipynb
 # Then: Kernel → Change kernel → FlowRun (venv)
 ```
 
+See [QUICK_START.md](QUICK_START.md) for the full setup walkthrough.
+
 ## Documentation
 
 | Document | Description |
@@ -47,7 +83,10 @@ jupyter notebook flowrun_agent.ipynb
 ## Project Structure
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.32/
+flowrun-streamlet-ioc-triage-v0.0.33/
+├── compose.yaml              # Docker / Podman compose (default deployment)
+├── Dockerfile                # Container image — uvicorn on port 7777
+├── .dockerignore
 ├── flowrun_agent.py          # CLI entry point
 ├── flowrun_agent.ipynb       # Jupyter Notebook (8 cells)
 ├── requirements.txt
@@ -55,6 +94,10 @@ flowrun-streamlet-ioc-triage-v0.0.32/
 ├── .gitignore
 ├── QUICK_START.md
 ├── README.md
+├── web/
+│   ├── app.py                # FastAPI app — /, /triage, /health
+│   ├── templates/index.html  # htmx-driven UI on port 7777
+│   └── static/style.css
 ├── agent/
 │   ├── graph.py              # LangGraph StateGraph — nodes & edges
 │   ├── state.py              # AgentState TypedDict
@@ -63,10 +106,10 @@ flowrun-streamlet-ioc-triage-v0.0.32/
 │   ├── report.py             # CLI text & HTML report formatters
 │   ├── credentials.py        # .env → os.environ → getpass() resolution
 │   ├── tracing.py            # OpenTelemetry / Traceloop (OpenLLMetry) setup
-│   ├── tools/                # LangChain tool wrappers (5 tools)
+│   ├── tools/                # LangChain tool wrappers
 │   └── integrations/         # Raw HTTP clients & response parsers
-├── tests/                    # 72 tests (pytest)
-└── docs/                     # PRD, Architecture, User Manual, Build Prompt
+├── tests/                    # pytest suite (164+ tests)
+└── docs/                     # PRD, Architecture, User Manual, Build Prompt, ERD
 ```
 
 ## Changing Models
@@ -83,6 +126,14 @@ MODEL_CONFIG = {
 No other file needs to change.
 
 ## Changelog
+
+**v0.0.33 — Containerized default deployment + web UI**
+- **New**: `Dockerfile` and `compose.yaml` make the container the default install path. Single command (`docker compose up` or `podman compose up`) builds and starts the stack.
+- **New**: FastAPI web UI on port **7777** (`web/app.py`) with an htmx-driven form. Reuses the existing LangGraph and the HTML report formatter — no agent logic changed.
+- **New**: `/health` endpoint for container liveness probes; built-in `HEALTHCHECK` on the image.
+- **New**: `FLOWRUN_NO_PROMPT=1` skips `getpass()` so the agent fails fast in non-interactive environments instead of hanging.
+- **New**: Default OTLP destination inside the container is `http://host.docker.internal:4318`, made reachable on both Docker Desktop and rootless Podman via `extra_hosts: host-gateway`.
+- **Compatible**: CLI (`python flowrun_agent.py`) and the Jupyter notebook continue to work unchanged.
 
 **v0.0.32 — Vendor-neutral tracing**
 - **Removed**: Arize-specific tracing dependencies (`arize-otel`, `openinference-instrumentation-langchain`)
