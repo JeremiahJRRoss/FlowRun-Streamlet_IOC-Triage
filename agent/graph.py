@@ -147,7 +147,7 @@ async def input_node(state: AgentState) -> dict:
         "escalation_required": False,
         "report_text": "",
         "report_html": "",
-        "arize_trace_url": "",
+        "trace_endpoint": "",
     }
 
 
@@ -308,7 +308,7 @@ async def correlation_node(state: AgentState) -> dict:
     """
     Transform raw API responses into a composite threat score.
     Pure Python — no LLM calls. Deterministic, fast, unit-testable.
-    Custom Arize span for observability.
+    Emits a custom OpenTelemetry span for observability.
     """
     try:
         from opentelemetry import trace
@@ -322,7 +322,7 @@ async def correlation_node(state: AgentState) -> dict:
 
     composite, breakdown, weights = compute_composite(raw_intel, intel_errors, ioc_type)
 
-    # Manual Arize span
+    # Manual OpenTelemetry span
     if tracer:
         try:
             with tracer.start_as_current_span("flowrun.correlate") as span:
@@ -373,7 +373,7 @@ async def severity_node(state: AgentState) -> dict:
 
     justification = ". ".join(parts) + "." if parts else "No intelligence data available."
 
-    # Manual Arize span
+    # Manual OpenTelemetry span
     if tracer:
         try:
             with tracer.start_as_current_span("flowrun.severity") as span:
@@ -487,8 +487,9 @@ Do not include recommendations — only explain the verdict."""
             # Fall back to pre-computed justification if LLM fails
             print(f"⚠️  Report LLM error (using fallback): {exc}", file=sys.stderr)
 
-    # Build Arize trace URL (placeholder — actual URL depends on Arize setup)
-    arize_trace_url = "https://app.arize.com"
+    # Resolve the active OTLP endpoint (single source of truth lives in tracing.py)
+    from agent.tracing import _resolve_endpoint
+    trace_endpoint = _resolve_endpoint()
 
     # Format CLI report
     report_text = format_cli_report(
@@ -499,7 +500,7 @@ Do not include recommendations — only explain the verdict."""
         raw_intel=raw_intel,
         verdict_justification=verdict_justification,
         intel_errors=intel_errors,
-        arize_trace_url=arize_trace_url,
+        trace_endpoint=trace_endpoint,
         score_breakdown=score_breakdown,
         active_weights=active_weights,
     )
@@ -513,7 +514,7 @@ Do not include recommendations — only explain the verdict."""
         raw_intel=raw_intel,
         verdict_justification=verdict_justification,
         intel_errors=intel_errors,
-        arize_trace_url=arize_trace_url,
+        trace_endpoint=trace_endpoint,
         score_breakdown=score_breakdown,
         active_weights=active_weights,
     )
@@ -521,7 +522,7 @@ Do not include recommendations — only explain the verdict."""
     return {
         "report_text": report_text,
         "report_html": report_html,
-        "arize_trace_url": arize_trace_url,
+        "trace_endpoint": trace_endpoint,
         "verdict_justification": verdict_justification,
     }
 

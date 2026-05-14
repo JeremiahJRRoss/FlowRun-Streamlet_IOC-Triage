@@ -1,11 +1,11 @@
-# BUILD PROMPT — FlowRun Streamlet: IoC Triage v0.0.31
+# BUILD PROMPT — FlowRun Streamlet: IoC Triage v0.0.32
 ## Complete Engineering Instructions
 
 ---
 
 ## CONTEXT & YOUR MISSION
 
-You are maintaining a working application called **FlowRun Streamlet: IoC Triage**. This document is the single source of truth for the codebase as of v0.0.31. Reference documents: User Manual v3, PRD v3, Architecture v3.
+You are maintaining a working application called **FlowRun Streamlet: IoC Triage**. This document is the single source of truth for the codebase as of v0.0.32. Reference documents: User Manual v3, PRD v3, Architecture v3.
 
 ---
 
@@ -18,7 +18,7 @@ A security operations tool that:
 - Correlates results using weighted scoring across 4 weight sets into a composite threat score (0.0–1.0)
 - Maps the score to one of **five** severity verdicts: CLEAN, LOW, MEDIUM, HIGH, CRITICAL
 - Outputs a structured threat report with TL;DR summary, detection names, conflict callouts, and per-ecosystem breakdown
-- Sends a full execution trace to Arize AI for observability
+- Sends a full execution trace via OpenTelemetry (OTLP/HTTP) to the configured collector for observability
 - Pauses for human confirmation before releasing a CRITICAL verdict (CLI mode; auto-proceeds in Jupyter)
 - Runs as both a **CLI application** and a **Jupyter Notebook**
 
@@ -33,8 +33,8 @@ A security operations tool that:
 | Language model (classifier) | OpenAI `gpt-4o-mini`, `temperature=0.0` |
 | Language model (report) | OpenAI `gpt-4o`, `temperature=0.3` |
 | HTTP client | `httpx >= 0.27` (async) |
-| Observability | `arize-otel` + `openinference-instrumentation-langchain` |
-| Tracing protocol | OTLP → Arize AI |
+| Observability | `traceloop-sdk` (OpenLLMetry on OpenTelemetry) |
+| Tracing protocol | OTLP/HTTP → local OpenTelemetry collector (default) or any OTLP endpoint |
 | Key loading | `python-dotenv` |
 | Notebook widgets | `ipywidgets >= 8.0` |
 | Runtime | Python 3.11+ (tested on 3.14), `asyncio` |
@@ -46,8 +46,9 @@ langchain>=0.3
 langchain-openai>=0.1
 openai>=1.0
 httpx>=0.27
-arize-otel
-openinference-instrumentation-langchain
+traceloop-sdk>=0.30
+opentelemetry-sdk>=1.27
+opentelemetry-exporter-otlp-proto-http>=1.27
 python-dotenv>=1.0
 ipywidgets>=8.0
 ```
@@ -57,7 +58,7 @@ ipywidgets>=8.0
 ## PROJECT FILE STRUCTURE
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.31/
+flowrun-streamlet-ioc-triage-v0.0.32/
 │
 ├── flowrun_agent.py              # CLI entry point
 ├── flowrun_agent.ipynb           # Jupyter Notebook (8 cells)
@@ -70,7 +71,7 @@ flowrun-streamlet-ioc-triage-v0.0.31/
 │   ├── graph.py                  # LangGraph StateGraph — all nodes and edges
 │   ├── state.py                  # AgentState TypedDict
 │   ├── llm.py                    # MODEL_CONFIG dict + get_llm(task) factory
-│   ├── tracing.py                # Arize / OpenInference tracer setup
+│   ├── tracing.py                # OpenTelemetry / Traceloop (OpenLLMetry) tracer setup
 │   ├── credentials.py            # Key resolution: .env → os.environ → getpass()
 │   ├── scoring.py                # 4 weight sets, 8 normalisers, conflict detection, TL;DR
 │   ├── report.py                 # Report formatter — CLI text + HTML (Jupyter)
@@ -204,7 +205,7 @@ POST to `/api/v1/scan/` → get UUID → poll GET `/api/v1/result/{uuid}/` every
 2. `os.environ` check
 3. `getpass()` for any still-missing keys
 
-Required keys: OPENAI_API_KEY, VIRUSTOTAL_API_KEY, ABUSEIPDB_API_KEY, OTX_API_KEY, URLSCAN_API_KEY, ARIZE_API_KEY, ARIZE_SPACE_ID. Note: OSV.dev, npm, PyPI require no keys.
+Required keys (5): OPENAI_API_KEY, VIRUSTOTAL_API_KEY, ABUSEIPDB_API_KEY, OTX_API_KEY, URLSCAN_API_KEY. Note: OSV.dev, npm, PyPI require no keys. OpenTelemetry configuration is fully optional; the agent defaults to a local OTLP/HTTP collector on `http://localhost:4318`. Override via `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, or `OTEL_SERVICE_NAME`.
 
 ### 9. AgentState Schema
 ```python
@@ -222,23 +223,29 @@ class AgentState(TypedDict):
     escalation_required: bool
     report_text: str
     report_html: str
-    arize_trace_url: str
+    trace_endpoint: str
 ```
 
-### 10. Arize Tracing
+### 10. OpenTelemetry Tracing
 ```python
-from arize.otel import register
-from openinference.instrumentation.langchain import LangChainInstrumentor
+from traceloop.sdk import Traceloop
 
-def init_tracing(project_name='flowrun-streamlet-ioc-triage'):
-    tracer_provider = register(
-        space_id=os.getenv('ARIZE_SPACE_ID'),
-        api_key=os.getenv('ARIZE_API_KEY'),
-        project_name=project_name,      # NOTE: project_name, NOT model_id
+def init_tracing(app_name='flowrun-streamlet-ioc-triage'):
+    endpoint = (
+        os.getenv('OTEL_EXPORTER_OTLP_ENDPOINT')
+        or os.getenv('TRACELOOP_BASE_URL')
+        or 'http://localhost:4318'
     )
-    LangChainInstrumentor().instrument(tracer_provider=tracer_provider)
-    return tracer_provider
+    Traceloop.init(
+        app_name=app_name,
+        api_endpoint=endpoint,
+        disable_batch=True,
+        resource_attributes={'service.name': app_name},
+    )
+    return endpoint
 ```
+
+Traceloop installs a global OpenTelemetry `TracerProvider` and auto-instruments LangChain, LangGraph, and OpenAI. Custom manual spans in `correlation_node` (`flowrun.correlate`) and `severity_node` (`flowrun.severity`) use the standard `opentelemetry.trace.get_tracer()` API and are picked up automatically.
 
 ### 11. MODEL_CONFIG — Single Source of Truth
 ```python
@@ -272,7 +279,8 @@ Bare package names (no prefix) are scanned across 10 ecosystems simultaneously: 
 
 - ❌ Do NOT use `gpt-5.2` — use `gpt-4o-mini` (classifier) and `gpt-4o` (report)
 - ❌ Do NOT use `requests` — use `httpx` (async)
-- ❌ Do NOT use `model_id` in `register()` — use `project_name`
+- ❌ Do NOT pin `arize-otel` or `openinference-instrumentation-langchain` — use `traceloop-sdk` instead
+- ❌ Do NOT require `ARIZE_API_KEY` / `ARIZE_SPACE_ID` — they were removed; OpenTelemetry config is optional via standard env vars
 - ❌ Do NOT include VirusTotal in CVE_WEIGHTS — VT has no CVE endpoint
 - ❌ Do NOT use linear VT normalisation — use the non-linear tiered curve
 - ❌ Do NOT hardcode model strings outside `agent/llm.py`
@@ -280,8 +288,8 @@ Bare package names (no prefix) are scanned across 10 ecosystems simultaneously: 
 - ❌ Do NOT implement only 7 IOC types — there are 9 (+ unknown)
 - ❌ Do NOT query VT/OTX for package types — they're skipped; only OSV.dev + registry are queried
 - ❌ Do NOT allow a single API failure to abort the whole triage
-- ❌ Do NOT allow Arize export failure to block the triage report
+- ❌ Do NOT allow OTLP export failure to block the triage report
 
 ---
 
-*FlowRun Streamlet: IoC Triage — Build Prompt v3 — Reconciled with codebase v0.0.31*
+*FlowRun Streamlet: IoC Triage — Build Prompt v3 — Reconciled with codebase v0.0.32*

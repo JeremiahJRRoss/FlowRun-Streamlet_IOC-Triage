@@ -31,4 +31,4 @@ class AgentState(TypedDict):
     # ── OUTPUT ─────────────────────────────────────────────────
     report_text: str                    # CLI-formatted threat report
     report_html: str                    # HTML-formatted report for Jupyter
-    arize_trace_url: str                # Direct URL to trace in Arize UI
+    trace_endpoint: str                 # OTLP endpoint where this run's spans were exported

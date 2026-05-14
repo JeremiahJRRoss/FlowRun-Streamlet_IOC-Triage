@@ -1,27 +1,27 @@
 > **ARCHITECTURAL DESIGN DOCUMENT**
 > **FlowRun Streamlet: IoC Triage**
 > System Architecture, Component Design & Integration Reference
-> LangGraph · LangChain · OpenAI GPT-4o · Arize AI · OpenInference
+> LangGraph · LangChain · OpenAI GPT-4o · OpenTelemetry · Traceloop (OpenLLMetry)
 
 | **Attribute**         | **Value**                                                    |
 |-----------------------|--------------------------------------------------------------|
 | **Document Type**     | Architectural Design Document (ADD)                          |
 | **Product**           | FlowRun Streamlet: IoC Triage                                |
-| **Version**           | v0.0.31 — Reconciled with codebase                          |
+| **Version**           | v0.0.32 — Reconciled with codebase                          |
 | **Agentic Framework** | LangGraph 0.2+ (StateGraph)                                  |
 | **LLM Integration**   | LangChain 0.3+ / OpenAI GPT-4o-mini + GPT-4o                |
-| **Observability**     | Arize AI via OpenInference OTLP                              |
+| **Observability**     | OpenTelemetry via Traceloop SDK (OpenLLMetry) over OTLP/HTTP |
 
 
 ## 1. Document Purpose & Scope
 
-This document describes the internal structure, component design, data flows, and technical decisions of the FlowRun Streamlet: IoC Triage as implemented in codebase version 0.0.31.
+This document describes the internal structure, component design, data flows, and technical decisions of the FlowRun Streamlet: IoC Triage as implemented in codebase version 0.0.32.
 
 > **Architectural Philosophy**
 > Transparency first — every decision traceable to a named source.
 > Fail gracefully — partial intelligence is better than no intelligence.
 > Separation of concerns — tools, graph, scoring, and reporting are fully decoupled.
-> Observable by design — Arize tracing is embedded at the graph level.
+> Observable by design — OpenTelemetry tracing is embedded at the graph level.
 > Zero trust credentials — no key ever touches source code, stdout, logs, or notebook output.
 
 
@@ -40,7 +40,7 @@ This document describes the internal structure, component design, data flows, an
 | **OSV.dev API**       | Package vulnerability + malware advisories         | api.osv.dev               | HTTPS/443    | None required            |
 | **npm Registry**      | Package metadata (age, maintainers, scripts)       | registry.npmjs.org        | HTTPS/443    | None required            |
 | **PyPI JSON API**     | Package metadata (age, author, repo)               | pypi.org                  | HTTPS/443    | None required            |
-| **Arize AI (OTLP)**   | Trace export & observability                       | otlp.arize.com:4317       | gRPC/4317    | ARIZE_API_KEY + SPACE_ID |
+| **OpenTelemetry collector** | Trace export & observability                  | localhost:4318 (default)  | OTLP/HTTP    | None (configurable via `OTEL_EXPORTER_OTLP_HEADERS`) |
 
 
 ## 3. Layered Architecture
@@ -60,7 +60,7 @@ This document describes the internal structure, component design, data flows, an
 │ VT  AbuseIPDB  OTX  urlscan  NVD  OSV.dev  npm  PyPI        │
 ├──────────────────────────────────────────────────────────────┤
 │ LAYER 1 — OBSERVABILITY LAYER                                │
-│ OpenInference instrumentation | Arize OTLP exporter          │
+│ Traceloop SDK (OpenLLMetry) | OTLP/HTTP exporter             │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -68,7 +68,7 @@ This document describes the internal structure, component design, data flows, an
 ## 4. Project File Structure
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.31/
+flowrun-streamlet-ioc-triage-v0.0.32/
 │
 ├── flowrun_agent.py              # CLI entry point — interactive loop
 ├── flowrun_agent.ipynb           # Jupyter Notebook interface (8 cells)
@@ -81,7 +81,7 @@ flowrun-streamlet-ioc-triage-v0.0.31/
 │   ├── graph.py                  # LangGraph StateGraph — all nodes & edges (614 lines)
 │   ├── state.py                  # AgentState TypedDict schema
 │   ├── llm.py                    # MODEL_CONFIG dict + get_llm() factory
-│   ├── tracing.py                # Arize / OpenInference tracer setup
+│   ├── tracing.py                # OpenTelemetry / Traceloop (OpenLLMetry) tracer setup
 │   ├── credentials.py            # Key resolution: .env → os.environ → getpass()
 │   ├── scoring.py                # Weights, normalisers, conflict detection, TL;DR (717 lines)
 │   ├── report.py                 # CLI text + HTML report formatters (504 lines)
@@ -114,10 +114,11 @@ flowrun-streamlet-ioc-triage-v0.0.31/
 │   └── test_graph.py             # 34 tests — integration with stubbed tools
 │
 └── docs/
+    ├── ERD.md
     ├── FlowRun_Streamlet_Build_Prompt.md
-    ├── FlowRun_Streamlet_IoC_Triage_Architecture_v2.docx
-    ├── FlowRun_Streamlet_IoC_Triage_PRD_v2.docx
-    ├── FlowRun_Streamlet_IoC_Triage_User_Manual_v2.3.docx
+    ├── FlowRun_Streamlet_IoC_Triage_Architecture_v2.md
+    ├── FlowRun_Streamlet_IoC_Triage_PRD_v2.md
+    ├── FlowRun_Streamlet_IoC_Triage_User_Manual_v2.md
     └── v0.0.3_ADDENDUM.md
 ```
 
@@ -147,7 +148,7 @@ class AgentState(TypedDict):
     # ── OUTPUT ─────────────────────────────────────────────────
     report_text: str                    # CLI-formatted threat report
     report_html: str                    # HTML-formatted report for Jupyter
-    arize_trace_url: str                # Direct URL to trace in Arize UI
+    trace_endpoint: str                 # OTLP endpoint where this run's spans were exported
 ```
 
 **5.2 State Lifecycle**
@@ -159,7 +160,7 @@ class AgentState(TypedDict):
 | **enrichment_node**  | raw_intel, intel_errors                                   | ioc_clean, ioc_type              |
 | **correlation_node** | score_breakdown, composite_score, active_weights          | raw_intel, intel_errors, ioc_type|
 | **severity_node**    | severity_band, verdict_justification, escalation_required | composite_score, score_breakdown |
-| **report_node**      | report_text, report_html, arize_trace_url, verdict_justification | Full state                |
+| **report_node**      | report_text, report_html, trace_endpoint, verdict_justification  | Full state                |
 
 
 ## 6. LangGraph Graph Design
@@ -313,27 +314,35 @@ PACKAGE_MULTI_WEIGHTS = {osv_multi: 1.00}
 **9.4 Rich Intel Extraction** — `extract_vt_detections()`, `extract_otx_campaigns()`, `extract_nvd_details()`, `extract_osv_details()`, `generate_tldr()`.
 
 
-## 10. Observability Architecture (Arize AI)
+## 10. Observability Architecture (OpenTelemetry)
 
 **10.1 Instrumentation Initialisation** (`agent/tracing.py`)
 
 ```python
-from arize.otel import register
-from openinference.instrumentation.langchain import LangChainInstrumentor
+from traceloop.sdk import Traceloop
 
-def init_tracing(project_name='flowrun-streamlet-ioc-triage'):
-    tracer_provider = register(
-        space_id=os.getenv('ARIZE_SPACE_ID'),
-        api_key=os.getenv('ARIZE_API_KEY'),
-        project_name=project_name,      # NOTE: project_name, NOT model_id
-    )
-    LangChainInstrumentor().instrument(tracer_provider=tracer_provider)
-    return tracer_provider
+Traceloop.init(
+    app_name="flowrun-streamlet-ioc-triage",
+    api_endpoint="http://localhost:4318",   # default; OTEL_EXPORTER_OTLP_ENDPOINT overrides
+    disable_batch=True,
+    headers=None,
+    resource_attributes={"service.name": "flowrun-streamlet-ioc-triage"},
+)
 ```
 
-Auto-instruments all LangChain ChatModel calls, tool invocations, and LangGraph node executions. Custom manual spans added in `correlation_node` (flowrun.correlate) and `severity_node` (flowrun.severity) using `opentelemetry.trace`.
+Traceloop (OpenLLMetry) installs a global OpenTelemetry `TracerProvider` and auto-instruments LangChain, LangGraph, OpenAI, and other supported libraries. Custom manual spans in `correlation_node` (`flowrun.correlate`) and `severity_node` (`flowrun.severity`) use the standard `opentelemetry.trace.get_tracer()` API and are picked up by the same provider — no extra wiring needed.
 
-If Arize is unavailable, tracing fails silently — never blocks triage.
+**10.2 Endpoint Resolution**
+
+Spans are exported via OTLP/HTTP to the endpoint resolved with this precedence:
+
+1. `OTEL_EXPORTER_OTLP_ENDPOINT` (standard OpenTelemetry env var)
+2. `TRACELOOP_BASE_URL` (Traceloop env var)
+3. `http://localhost:4318` (built-in default — local collector agent)
+
+**10.3 Non-Blocking Behaviour**
+
+If `Traceloop.init()` raises (bad URL, missing dependency, etc.), the error is caught and logged to stderr — triage continues without tracing per **NFR-07**. If the collector is unreachable at runtime, the OTLP exporter queues spans and fails silently on export; the user sees no errors during triage.
 
 
 ## 11. Credential Management
@@ -343,9 +352,9 @@ Resolution chain in `agent/credentials.py`:
 2. `os.environ` check
 3. `getpass()` for any still-missing keys
 
-Required keys (7): OPENAI_API_KEY, VIRUSTOTAL_API_KEY, ABUSEIPDB_API_KEY, OTX_API_KEY, URLSCAN_API_KEY, ARIZE_API_KEY, ARIZE_SPACE_ID.
+Required keys (5): OPENAI_API_KEY, VIRUSTOTAL_API_KEY, ABUSEIPDB_API_KEY, OTX_API_KEY, URLSCAN_API_KEY.
 
-Note: OSV.dev, npm registry, and PyPI JSON API require no API keys.
+Note: OSV.dev, npm registry, and PyPI JSON API require no API keys. OpenTelemetry configuration is fully optional (defaults to local collector on `http://localhost:4318`); see PRD §9 for the optional `OTEL_*` / `TRACELOOP_*` env vars.
 
 
 ## 12. Supported Package Ecosystems (27)
@@ -369,10 +378,10 @@ To add a new threat intelligence source:
 3. Add weight to appropriate weight dict in `agent/scoring.py` (ensure sum = 1.00)
 4. Add normaliser function + register in NORMALISERS dict
 5. Register tool in enrichment_node's task dict, gated on ioc_type
-6. If source requires an API key: add to REQUIRED_KEYS in credentials.py + .env.template. If free/open (like OSV.dev): no credential changes needed.
+6. If source requires an API key: add it to `REQUIRED_KEYS` in `credentials.py` + `.env.template`. If free/open (like OSV.dev): no credential changes needed.
 
 No other files change — graph, state, routing, tracing adapt automatically.
 
 ---
 
-*FlowRun Streamlet: IoC Triage — Architecture v3 — Reconciled with codebase v0.0.31*
+*FlowRun Streamlet: IoC Triage — Architecture v3 — Reconciled with codebase v0.0.32*

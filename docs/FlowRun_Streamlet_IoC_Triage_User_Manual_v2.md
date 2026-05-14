@@ -2,9 +2,9 @@
 > **User Manual & Technical Reference**
 > Automated Threat Intelligence Triage for Security Operations
 
-| **Version** v0.0.31 | **Framework** LangChain + LangGraph |
+| **Version** v0.0.32 | **Framework** LangChain + LangGraph |
 |---|---|
-| **Status** Active Release | **Observability** Arize AI |
+| **Status** Active Release | **Observability** OpenTelemetry (Traceloop / OpenLLMetry) |
 
 
 ## 1. What is the FlowRun Streamlet: IoC Triage?
@@ -16,7 +16,7 @@ When you provide the agent with a suspicious artifact — an IP address, domain 
 > **Definition: Indicator of Compromise (IOC)**
 > An IOC is a piece of forensic data — such as an IP address, domain, file hash, URL, or package name — that may indicate a system has been breached or that an attack is underway.
 
-Every action the agent takes is automatically traced and sent to Arize AI for real-time observability, performance monitoring, and post-incident review.
+Every action the agent takes is automatically traced via OpenTelemetry and shipped via OTLP/HTTP to your collector (by default a local agent on `http://localhost:4318`) for real-time observability, performance monitoring, and post-incident review.
 
 
 ## 2. The Problem the Agent Solves
@@ -142,7 +142,7 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **Agent Orchestration** | LangGraph StateGraph — node execution, conditional routing, shared state                |
 | **LLM & Tool Layer**    | LangChain tool wrappers for 9 APIs. OpenAI GPT-4o-mini (classifier) + GPT-4o (report). All model config in agent/llm.py. |
 | **Intelligence Layer**  | VirusTotal, AbuseIPDB, OTX, urlscan.io, NIST NVD, OSV.dev, npm Registry, PyPI JSON API |
-| **Observability Layer** | Arize AI receiving OpenInference-formatted traces                                       |
+| **Observability Layer** | OpenTelemetry collector receiving OTLP/HTTP-formatted traces (default: local agent on http://localhost:4318) |
 
 **6.2 Technology Stack**
 
@@ -153,7 +153,7 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **Language Models**          | OpenAI GPT-4o-mini (classifier, temp=0.0) + GPT-4o (report, temp=0.3)  |
 | **HTTP Client**             | httpx 0.27+ (async) — all API calls                                     |
 | **Threat Intel APIs**       | VirusTotal, AbuseIPDB, OTX, urlscan.io, NIST NVD, OSV.dev, npm, PyPI   |
-| **Observability**           | Arize AI via arize-otel + openinference-instrumentation-langchain        |
+| **Observability**           | OpenTelemetry via Traceloop SDK (OpenLLMetry) — OTLP/HTTP exporter      |
 | **Language / Runtime**      | Python 3.11+ (tested on 3.14) with asyncio                              |
 
 
@@ -166,7 +166,7 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **Operating System** | macOS 12+, Ubuntu 20.04+, or Windows 10+ (via WSL2)                     |
 | **Python Version**   | Python 3.11 or higher (tested on 3.14)                                  |
 | **RAM**              | Minimum 4 GB (8 GB recommended)                                         |
-| **Network**          | Outbound HTTPS to api.openai.com, virustotal.com, abuseipdb.com, otx.alienvault.com, urlscan.io, nvd.nist.gov, api.osv.dev, registry.npmjs.org, pypi.org, and app.arize.com |
+| **Network**          | Outbound HTTPS to api.openai.com, virustotal.com, abuseipdb.com, otx.alienvault.com, urlscan.io, nvd.nist.gov, api.osv.dev, registry.npmjs.org, pypi.org. Outbound OTLP/HTTP to the configured collector (default localhost:4318). |
 
 **7.2 Required API Keys**
 
@@ -177,15 +177,13 @@ The agent is built as a LangGraph StateGraph with 8 nodes. Each node reads from 
 | **ABUSEIPDB_API_KEY**    | Free account. 1,000 req/day.                                                |
 | **OTX_API_KEY**          | Free AlienVault OTX account.                                                |
 | **URLSCAN_API_KEY**      | Free account. 100 public scans/day.                                         |
-| **ARIZE_API_KEY**        | Arize AI account (free tier). Settings → API Keys.                          |
-| **ARIZE_SPACE_ID**       | Found alongside API key in Arize dashboard.                                 |
 
-Note: OSV.dev, npm registry, and PyPI JSON API require no API keys.
+Note: OSV.dev, npm registry, and PyPI JSON API require no API keys. OpenTelemetry tracing is fully optional — by default spans are shipped to a local collector on `http://localhost:4318` and the export fails silently if no collector is running.
 
 **7.3 Python Dependencies**
 
 ```
-pip install langgraph langchain langchain-openai openai httpx arize-otel openinference-instrumentation-langchain python-dotenv ipywidgets
+pip install langgraph langchain langchain-openai openai httpx traceloop-sdk opentelemetry-sdk opentelemetry-exporter-otlp-proto-http python-dotenv ipywidgets
 ```
 
 
@@ -207,8 +205,11 @@ VIRUSTOTAL_API_KEY=paste_your_key_here
 ABUSEIPDB_API_KEY=paste_your_key_here
 OTX_API_KEY=paste_your_key_here
 URLSCAN_API_KEY=paste_your_key_here
-ARIZE_API_KEY=paste_your_key_here
-ARIZE_SPACE_ID=paste_your_space_id_here
+
+# Optional — override the default local OTLP collector destination:
+# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer your_token
+# OTEL_SERVICE_NAME=flowrun-streamlet-ioc-triage
 ```
 
 No quotes around values. Add `.env` to `.gitignore`. Never share, commit, or paste into chat.
@@ -219,7 +220,7 @@ No quotes around values. Add `.env` to `.gitignore`. Never share, commit, or pas
 **9.1 Prerequisites**
 
 ```bash
-pip install notebook ipykernel langgraph langchain langchain-openai openai httpx arize-otel openinference-instrumentation-langchain python-dotenv ipywidgets
+pip install notebook ipykernel langgraph langchain langchain-openai openai httpx traceloop-sdk opentelemetry-sdk opentelemetry-exporter-otlp-proto-http python-dotenv ipywidgets
 ```
 
 > **Important: Register Virtual Environment as Jupyter Kernel**
@@ -236,16 +237,16 @@ pip install notebook ipykernel langgraph langchain langchain-openai openai httpx
 |----------|----------------------------------------------------------------------------|
 | Cell 1   | Install & Import — all required libraries                                 |
 | Cell 2   | API Key Setup — getpass() or load_dotenv()                                |
-| Cell 3   | Arize Tracing Init                                                        |
+| Cell 3   | OpenTelemetry Tracing Init                                                |
 | Cell 4   | Tool Definitions — instantiates all LangChain tools                       |
 | Cell 5   | Graph Compilation                                                         |
 | Cell 6   | IOC Input Widget — text field + Analyze button. Results render inline.     |
 | Cell 7   | Report Display — rendered inline in Cell 6's output area                  |
-| Cell 8   | Arize Link                                                                |
+| Cell 8   | Trace Destination — prints the active OTLP endpoint                       |
 
 > **Tip — Kernel Restart**
 > If the agent hangs: Kernel → Restart & Clear Output, verify "FlowRun (venv)" is selected, re-run from Cell 1.
 
 ---
 
-*FlowRun Streamlet: IoC Triage — User Manual v3 — Reconciled with codebase v0.0.31*
+*FlowRun Streamlet: IoC Triage — User Manual v3 — Reconciled with codebase v0.0.32*

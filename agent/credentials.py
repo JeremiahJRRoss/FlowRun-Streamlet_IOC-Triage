@@ -16,8 +16,6 @@ REQUIRED_KEYS = [
     "ABUSEIPDB_API_KEY",
     "OTX_API_KEY",
     "URLSCAN_API_KEY",
-    "ARIZE_API_KEY",
-    "ARIZE_SPACE_ID",
 ]
 
 

@@ -255,7 +255,7 @@ def format_cli_report(
     raw_intel: dict[str, Any],
     verdict_justification: str,
     intel_errors: list[str],
-    arize_trace_url: str,
+    trace_endpoint: str,
     score_breakdown: dict[str, float] | None = None,
     active_weights: dict[str, float] | None = None,
 ) -> str:
@@ -335,7 +335,7 @@ ERRORS (non-fatal):
 RECOMMENDED ACTIONS:
   {action}
 
-ARIZE TRACE: {arize_trace_url or 'N/A'}
+OTLP ENDPOINT: {trace_endpoint or 'N/A'}
 {border}
 """
     return report.strip()
@@ -351,7 +351,7 @@ def format_html_report(
     raw_intel: dict[str, Any],
     verdict_justification: str,
     intel_errors: list[str],
-    arize_trace_url: str,
+    trace_endpoint: str,
     score_breakdown: dict[str, float] | None = None,
     active_weights: dict[str, float] | None = None,
 ) -> str:
