@@ -33,8 +33,6 @@ VIRUSTOTAL_API_KEY=your-vt-key-here
 ABUSEIPDB_API_KEY=your-abuseipdb-key-here
 OTX_API_KEY=your-otx-key-here
 URLSCAN_API_KEY=your-urlscan-key-here
-ARIZE_API_KEY=your-arize-key-here
-ARIZE_SPACE_ID=your-arize-space-id-here
 ```
 
 If you skip the `.env` file, the agent will prompt you for each key interactively at startup.
@@ -48,8 +46,18 @@ If you skip the `.env` file, the agent will prompt you for each key interactivel
 | ABUSEIPDB_API_KEY | [abuseipdb.com → Account → API](https://www.abuseipdb.com) |
 | OTX_API_KEY | [otx.alienvault.com → Settings → API Key](https://otx.alienvault.com) |
 | URLSCAN_API_KEY | [urlscan.io → Settings → API Keys](https://urlscan.io) |
-| ARIZE_API_KEY | [app.arize.com → Settings → API Keys](https://app.arize.com) |
-| ARIZE_SPACE_ID | [app.arize.com → Settings → API Keys](https://app.arize.com) |
+
+### Tracing (optional)
+
+By default the agent ships OpenTelemetry spans via OTLP/HTTP to `http://localhost:4318` — the standard port for a local OpenTelemetry collector agent. If you don't have a collector running locally, that's fine; tracing fails silently and triage continues normally.
+
+To send traces somewhere else, set `OTEL_EXPORTER_OTLP_ENDPOINT` (and optionally `OTEL_EXPORTER_OTLP_HEADERS` for authenticated backends) in your `.env`:
+
+```
+# OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+# OTEL_EXPORTER_OTLP_HEADERS=Authorization=Bearer your_token
+# OTEL_SERVICE_NAME=flowrun-streamlet-ioc-triage
+```
 
 ## 4. Run the CLI
 

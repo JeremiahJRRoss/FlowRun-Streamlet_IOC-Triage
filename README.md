@@ -1,8 +1,8 @@
-# 🛡️ FlowRun Streamlet: IoC Triage — v0.0.31
+# 🛡️ FlowRun Streamlet: IoC Triage — v0.0.32
 
 Automated Threat Intelligence Triage for Security Operations.
 
-Built with **LangGraph** + **LangChain** + **OpenAI GPT-4o** + **Arize AI**.
+Built with **LangGraph** + **LangChain** + **OpenAI GPT-4o** + **OpenTelemetry (Traceloop)**.
 
 ## What It Does
 
@@ -13,7 +13,7 @@ Submit any IOC (IP address, domain, URL, file hash, CVE identifier, or **softwar
 3. Compute a weighted composite threat score (0.0–1.0)
 4. Map to one of 5 severity verdicts: **CLEAN → LOW → MEDIUM → HIGH → CRITICAL**
 5. Generate a structured threat report with recommended actions
-6. Stream a full execution trace to Arize AI for observability
+6. Stream a full execution trace via OpenTelemetry (OTLP/HTTP) to the configured collector for observability
 
 ## Quick Start
 
@@ -47,7 +47,7 @@ jupyter notebook flowrun_agent.ipynb
 ## Project Structure
 
 ```
-flowrun-streamlet-ioc-triage-v0.0.31/
+flowrun-streamlet-ioc-triage-v0.0.32/
 ├── flowrun_agent.py          # CLI entry point
 ├── flowrun_agent.ipynb       # Jupyter Notebook (8 cells)
 ├── requirements.txt
@@ -62,7 +62,7 @@ flowrun-streamlet-ioc-triage-v0.0.31/
 │   ├── scoring.py            # Weighted scoring formula & severity mapping
 │   ├── report.py             # CLI text & HTML report formatters
 │   ├── credentials.py        # .env → os.environ → getpass() resolution
-│   ├── tracing.py            # Arize AI / OpenInference setup
+│   ├── tracing.py            # OpenTelemetry / Traceloop (OpenLLMetry) setup
 │   ├── tools/                # LangChain tool wrappers (5 tools)
 │   └── integrations/         # Raw HTTP clients & response parsers
 ├── tests/                    # 72 tests (pytest)
@@ -83,6 +83,13 @@ MODEL_CONFIG = {
 No other file needs to change.
 
 ## Changelog
+
+**v0.0.32 — Vendor-neutral tracing**
+- **Removed**: Arize-specific tracing dependencies (`arize-otel`, `openinference-instrumentation-langchain`)
+- **Added**: Standard OpenTelemetry SDK + Traceloop SDK (OpenLLMetry). Auto-instruments LangChain, LangGraph, and OpenAI.
+- **Default destination**: local OTLP/HTTP collector agent on `http://localhost:4318`. Override via `OTEL_EXPORTER_OTLP_ENDPOINT` to ship to any collector or managed observability backend.
+- **Required keys reduced from 7 to 5**: `ARIZE_API_KEY` and `ARIZE_SPACE_ID` are gone. OpenTelemetry configuration is fully optional.
+- **CLI report footer** now shows the active `OTLP ENDPOINT` instead of an Arize trace URL.
 
 **v0.0.31 — Package supply chain analysis + multi-ecosystem scanning**
 - **New IOC type**: `package` — supports `ecosystem:name` format (e.g., `npm:postmark-mcp`, `pypi:requessts`, `rhel:openssl`, `debian:nginx`)
@@ -111,7 +118,7 @@ No other file needs to change.
 - **Fixed**: VirusTotal normalizer now uses a non-linear detection-count curve instead of a linear ratio. Even a few malicious detections (e.g. 13/94 engines) now correctly produce a MEDIUM or higher score, matching real-world analyst expectations.
 
 **v0.2 — Runtime compatibility fixes**
-- **Fixed**: `arize-otel` register() now uses `project_name` (was `model_id`)
+- **Fixed**: Tracing init now uses `project_name` correctly (was `model_id`)
 - **Fixed**: Domain IOCs (e.g. `malware.wicar.org`) now classified by regex — no LLM fallback needed
 - **Fixed**: Model config uses real, available models (`gpt-4o-mini`, `gpt-4o`) instead of unreleased GPT-5.2
 - **Added**: Jupyter kernel setup instructions (ipykernel registration for venv users)

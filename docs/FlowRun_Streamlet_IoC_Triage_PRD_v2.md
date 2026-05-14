@@ -1,23 +1,23 @@
 > **PRODUCT REQUIREMENTS DOCUMENT**
 > **FlowRun Streamlet: IoC Triage**
 > Automated Threat Intelligence Triage for Security Operations
-> LangGraph + LangChain + Arize AI + OpenAI GPT-4o
+> LangGraph + LangChain + OpenTelemetry + OpenAI GPT-4o
 
 | **Field**             | **Value**                                                    |
 |-----------------------|--------------------------------------------------------------|
 | **Document Type**     | Product Requirements Document (PRD)                          |
 | **Product Name**      | FlowRun Streamlet: IoC Triage                                |
-| **Version**           | v0.0.31                                                      |
+| **Version**           | v0.0.32                                                      |
 | **Status**            | Active — Reconciled with codebase                            |
 | **Owner**             | Security Platform Engineering                                |
 | **Stakeholders**      | SOC Operations, Security Engineering, Platform Observability |
 | **Agentic Framework** | LangGraph + LangChain                                        |
-| **Observability**     | Arize AI (OpenInference tracing)                             |
+| **Observability**     | OpenTelemetry (Traceloop / OpenLLMetry, OTLP/HTTP)           |
 
 
 ## 1. Executive Summary
 
-The FlowRun Streamlet: IoC Triage is an AI-powered security operations tool that automates the investigation of Indicators of Compromise (IOCs). Built on LangGraph and LangChain with full observability through Arize AI, the agent compresses a 10–25 minute manual analyst workflow into a sub-30-second automated pipeline while producing a full audit trail of every decision made.
+The FlowRun Streamlet: IoC Triage is an AI-powered security operations tool that automates the investigation of Indicators of Compromise (IOCs). Built on LangGraph and LangChain with vendor-neutral OpenTelemetry observability, the agent compresses a 10–25 minute manual analyst workflow into a sub-30-second automated pipeline while producing a full audit trail of every decision made.
 
 | **Attribute**           | **Value**                                                                                |
 |-------------------------|------------------------------------------------------------------------------------------|
@@ -25,8 +25,8 @@ The FlowRun Streamlet: IoC Triage is an AI-powered security operations tool that
 | **Core Value Prop**     | 10-25 min manual triage → sub-30 sec automated triage with full trace audit              |
 | **Agentic Framework**   | LangGraph 0.2+ (StateGraph with conditional routing)                                     |
 | **LLM**                 | OpenAI GPT-4o-mini (classification) + GPT-4o (report synthesis) via LangChain            |
-| **Observability**       | Arize AI with OpenInference auto-instrumentation                                         |
-| **Deployment Target**   | Local CLI + Jupyter Notebook (v0.0.31); REST API (v2.0 roadmap)                          |
+| **Observability**       | OpenTelemetry with Traceloop SDK (OpenLLMetry) auto-instrumentation, OTLP/HTTP export    |
+| **Deployment Target**   | Local CLI + Jupyter Notebook (v0.0.32); REST API (v2.0 roadmap)                          |
 | **IOC Types Supported** | IP, Domain, URL, File Hash (MD5/SHA-1/SHA-256), CVE, Package, Package Multi-Scan         |
 
 
@@ -46,12 +46,12 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **G-01** | Reduce per-IOC triage time from 10–25 minutes to under 30 seconds                      |
 | **G-02** | Aggregate intelligence from 4+ sources in a single, standardized workflow              |
 | **G-03** | Produce a deterministic, explainable severity verdict for every IOC                    |
-| **G-04** | Generate a complete, traceable audit trail for every triage decision via Arize AI      |
+| **G-04** | Generate a complete, traceable audit trail for every triage decision via OpenTelemetry  |
 | **G-05** | Deliver a Jupyter Notebook interface suitable for demos, training, and experimentation |
 | **G-06** | Ensure zero hardcoded credentials — all keys managed via secure runtime injection      |
 | **G-07** | Detect malicious software packages across 27 ecosystems via OSV.dev                   |
 
-**2.3 Non-Goals (v0.0.31)**
+**2.3 Non-Goals (v0.0.32)**
 
 - No REST API or web UI — CLI and Jupyter only
 - No SIEM integration (Splunk, Sentinel, etc.) — planned for v2.0
@@ -67,7 +67,7 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **Primary**   | Tier 2 SOC Analyst       | Validates escalated alerts, hunts threats proactively. Uses the agent to accelerate enrichment.                                                         |
 | **Secondary** | Security Engineer        | Builds, maintains, and extends the agent. Needs clean architecture, observable behavior, and well-defined integration points.                           |
 | **Secondary** | DevSecOps Engineer       | Uses package scanning to detect supply chain attacks in CI/CD pipelines.                                                                                |
-| **Tertiary**  | Demo Presenter / Trainer | Runs the Jupyter Notebook version live to explain LangGraph, LangChain, and Arize AI.                                                                  |
+| **Tertiary**  | Demo Presenter / Trainer | Runs the Jupyter Notebook version live to explain LangGraph, LangChain, and OpenTelemetry.                                                              |
 
 
 ## 4. Functional Requirements
@@ -131,16 +131,16 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **FR-25** | MUST         | Jupyter Notebook Cell 2 must never assign API keys as plain-text string literals                                           |
 | **FR-26** | SHOULD       | Display a clear warning if .env file is found but one or more required keys are missing                                    |
 
-**4.6 Arize AI Observability**
+**4.6 OpenTelemetry Observability**
 
-| **ID**    | **Priority** | **Requirement**                                                                                                            |
-|-----------|--------------|----------------------------------------------------------------------------------------------------------------------------| 
-| **FR-27** | MUST         | Initialize an OpenInference tracer connected to the user's Arize Space on agent startup                                   |
-| **FR-28** | MUST         | Every LangGraph node execution must generate a trace span                                                                  |
-| **FR-29** | MUST         | Every LangChain tool call must be captured as a child span                                                                 |
-| **FR-30** | MUST         | Severity verdict and composite score must be recorded as span attributes                                                   |
-| **FR-31** | MUST         | Export all traces to Arize in real-time using the arize-otel exporter                                                      |
-| **FR-32** | SHOULD       | Print a direct URL to the trace in the Arize UI after each run                                                             |
+| **ID**    | **Priority** | **Requirement**                                                                                                                                                                |
+|-----------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **FR-27** | MUST         | Initialize a global OpenTelemetry tracer via the Traceloop SDK (OpenLLMetry) at agent startup                                                                                  |
+| **FR-28** | MUST         | Every LangGraph node execution must generate a trace span                                                                                                                       |
+| **FR-29** | MUST         | Every LangChain tool call must be captured as a child span (auto-instrumented by Traceloop)                                                                                    |
+| **FR-30** | MUST         | Severity verdict and composite score must be recorded as span attributes                                                                                                        |
+| **FR-31** | MUST         | Export all traces via OTLP/HTTP. Default destination http://localhost:4318. Honor `OTEL_EXPORTER_OTLP_ENDPOINT`, `TRACELOOP_BASE_URL`, and `OTEL_EXPORTER_OTLP_HEADERS` env vars. |
+| **FR-32** | SHOULD       | Print the active OTLP endpoint after each run (CLI report footer)                                                                                                              |
 
 **4.7 Jupyter Notebook Interface**
 
@@ -162,8 +162,8 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **NFR-03** | Reliability     | Any single API source failure must not crash the agent — failed sources logged as 'unavailable'                              |
 | **NFR-04** | Security        | No API keys stored in code, logs, notebook output, or any persistent file except user-controlled .env                        |
 | **NFR-05** | Security        | All outbound API calls must use HTTPS                                                                                        |
-| **NFR-06** | Observability   | 100% of agent runs must produce a trace in Arize with all required spans                                                    |
-| **NFR-07** | Observability   | Arize trace failure must not block triage completion                                                                         |
+| **NFR-06** | Observability   | 100% of agent runs must emit a complete OTLP trace to the configured endpoint with all required spans                       |
+| **NFR-07** | Observability   | OpenTelemetry tracing failure (init error, unreachable collector) must not block triage completion                          |
 | **NFR-08** | Portability     | Agent must run on macOS 12+, Ubuntu 20.04+, and Windows 10+ (via WSL2)                                                       |
 | **NFR-09** | Maintainability | Each API integration must be an independent LangChain Tool, replaceable without modifying the graph                          |
 | **NFR-10** | Usability       | A user with no prior LangGraph experience must be able to run a triage in under 5 minutes via Jupyter                        |
@@ -179,7 +179,7 @@ Security Operations Centers face a structural imbalance between alert volume and
 | **Agent Orchestration** | LangGraph StateGraph with typed AgentState. Manages node execution, conditional routing.                                     |
 | **LLM Integration**     | LangChain + OpenAI. GPT-4o-mini (temperature=0.0) for classification. GPT-4o (temperature=0.3) for report synthesis. Both configured in agent/llm.py MODEL_CONFIG. |
 | **Tool / API Layer**    | LangChain Tool-wrapped async httpx clients for VirusTotal, AbuseIPDB, OTX, urlscan.io, NIST NVD, OSV.dev, and npm/PyPI registries. |
-| **Observability Layer** | OpenInference auto-instrumentation. arize-otel OTLP exporter streaming spans to Arize AI platform.                          |
+| **Observability Layer** | Traceloop SDK (OpenLLMetry) auto-instrumentation. OTLP/HTTP exporter streaming spans to the configured collector (default: local agent on http://localhost:4318). |
 
 **6.2 LangGraph Node Definitions**
 
@@ -211,7 +211,7 @@ class AgentState(TypedDict):
     escalation_required: bool           # True only when CRITICAL
     report_text: str                    # CLI-formatted report
     report_html: str                    # HTML-formatted report for Jupyter
-    arize_trace_url: str                # URL to trace in Arize UI
+    trace_endpoint: str                 # OTLP endpoint where this run's spans were exported
 ```
 
 **6.4 Severity Scoring Formula**
@@ -265,8 +265,9 @@ Four weight sets, each summing to 1.00. When sources are unavailable, weights ar
 | **LangChain**                               | 0.3+        | Tool definitions, LLM wrappers, output parsers                        |
 | **OpenAI Python SDK**                       | 1.0+        | GPT-4o-mini for classification; GPT-4o for report synthesis            |
 | **httpx**                                   | 0.27+       | Async HTTP client for all threat intel API calls                       |
-| **arize-otel**                              | Latest      | OpenInference OTLP exporter to Arize AI                               |
-| **openinference-instrumentation-langchain** | Latest      | Auto-instrumentation for LangChain/LangGraph operations                |
+| **traceloop-sdk**                           | 0.30+       | OpenLLMetry: OpenTelemetry-based auto-instrumentation for LangChain/LangGraph/OpenAI |
+| **opentelemetry-sdk**                       | 1.27+       | Core OpenTelemetry tracer used for manual spans in correlation/severity nodes        |
+| **opentelemetry-exporter-otlp-proto-http**  | 1.27+       | OTLP/HTTP exporter for shipping spans to a collector                                  |
 | **python-dotenv**                           | 1.0+        | Loads .env file into os.environ at startup                             |
 | **ipywidgets**                              | 8.0+        | Jupyter Notebook IOC input widget                                      |
 | **Python**                                  | 3.11+       | Runtime. asyncio required for parallel enrichment.                     |
@@ -302,11 +303,11 @@ Four weight sets, each summing to 1.00. When sources are unavailable, weights ar
 *npm/PyPI registry queried only when ecosystem is npm or pypi respectively.
 
 
-## 8. Observability Design (Arize AI)
+## 8. Observability Design (OpenTelemetry)
 
 **8.1 Trace Structure**
 
-Each agent run produces a single root trace with spans mirroring the LangGraph execution graph. Auto-instrumented by OpenInference + manual custom spans for correlation and severity nodes.
+Each agent run produces a single root trace with spans mirroring the LangGraph execution graph. Auto-instrumented by Traceloop SDK (OpenLLMetry) + manual custom spans for correlation and severity nodes emitted via the standard `opentelemetry.trace.get_tracer()` API. All spans are exported via OTLP/HTTP to the configured collector (default: local agent on `http://localhost:4318`).
 
 **8.2 Required Span Attributes**
 
@@ -328,12 +329,19 @@ Each agent run produces a single root trace with spans mirroring the LangGraph e
 | **ABUSEIPDB_API_KEY**  | Required      | abuseipdb.com → Account → API       |
 | **OTX_API_KEY**        | Required      | otx.alienvault.com → Settings       |
 | **URLSCAN_API_KEY**    | Required      | urlscan.io → Settings → API Keys    |
-| **ARIZE_API_KEY**      | Required      | app.arize.com → Settings → API Keys |
-| **ARIZE_SPACE_ID**     | Required      | app.arize.com → Settings → API Keys |
 
 Note: OSV.dev, npm registry, and PyPI JSON API require no API keys.
 
-Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass(). Keys never logged, printed, or included in Arize span attributes.
+Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass(). Keys never logged, printed, or included in OpenTelemetry span attributes.
+
+**Optional OpenTelemetry configuration** (not enforced — defaults work out of the box):
+
+| **Variable Name**              | **Purpose**                                                                                       |
+|--------------------------------|---------------------------------------------------------------------------------------------------|
+| **OTEL_EXPORTER_OTLP_ENDPOINT**| OTLP/HTTP endpoint for span export. Default `http://localhost:4318`.                              |
+| **TRACELOOP_BASE_URL**         | Traceloop-style alias for the above (used if the OTEL var is unset).                              |
+| **OTEL_EXPORTER_OTLP_HEADERS** | Comma-separated `key=value` pairs for authenticated collectors (e.g. `Authorization=Bearer ...`). |
+| **OTEL_SERVICE_NAME**          | Override the `service.name` resource attribute. Default `flowrun-streamlet-ioc-triage`.           |
 
 
 ## 10. Acceptance Criteria
@@ -345,7 +353,7 @@ Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass()
 | **AC-03** | IOC Type Detection             | Correctly identifies: IPv4, domain, URL, MD5, SHA-1, SHA-256, CVE, prefixed package, bare package name                            |
 | **AC-04** | Parallel Execution             | Enrichment time ≤ 1.5× slowest single API (not sequential sum)                                                                   |
 | **AC-05** | API Failure Tolerance          | VT 500 error → triage completes with remaining sources, report shows "unavailable"                                                |
-| **AC-06** | Arize Trace                    | Trace appears in Arize within 10 seconds with all required spans                                                                  |
+| **AC-06** | OpenTelemetry Trace            | Span batch arrives at the configured OTLP endpoint within 10 seconds with all required spans                                      |
 | **AC-07** | Key Security                   | `grep -r "sk-" .` returns zero hardcoded key values                                                                               |
 | **AC-08** | Jupyter Key Masking            | Saved .ipynb contains no API key values in cell outputs                                                                           |
 | **AC-09** | CRITICAL Escalation            | CRITICAL verdict pauses in CLI; auto-proceeds with warning in Jupyter                                                             |
@@ -362,7 +370,7 @@ Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass()
 |----------|--------------|-----------------------------------------------------|---------------------------------------------------------------------------------------------|
 | **R-01** | HIGH         | Free API rate limits exhausted during demo          | Use known-safe test IOCs. Cache results for demo runs.                                      |
 | **R-02** | MEDIUM       | VirusTotal key flagged for excessive use            | Implement request throttling. Non-linear VT normaliser reduces need for multiple queries.   |
-| **R-03** | MEDIUM       | Arize trace export fails silently                   | Wrap in try/except; log to stderr but never block triage (NFR-07).                          |
+| **R-03** | MEDIUM       | OTLP export fails silently when collector unreachable | Wrap in try/except; log to stderr but never block triage (NFR-07).                         |
 | **R-04** | LOW          | GPT-4o-mini misclassifies IOC type                  | Regex pre-classification resolves 9 of 10 IOC types before LLM is called.                  |
 | **R-05** | LOW          | urlscan.io public scans expose IOC                  | Documented: use private scan API for sensitive IOCs.                                        |
 
@@ -374,10 +382,10 @@ Resolution order: (1) .env file → (2) os.environ → (3) interactive getpass()
 | **v2.0**   | REST API             | FastAPI wrapper for programmatic IOC submission                                    |
 | **v2.0**   | SIEM Integration     | Cribl, Elastic, and Splunk connectors                                                     |
 | **v2.0**   | Bulk IOC Ingestion   | CSV file upload for batch triage                                                   |
-| **v2.1**   | Arize Evaluations    | Span and trace-level LLM-as-judge evaluations                                     |
+| **v2.1**   | Trace-driven Evals   | OTel-based span/trace-level LLM-as-judge evaluations                              |
 | **v2.1**   | Socket.dev           | Real-time supply chain attack detection (install script analysis, network behavior)|
 | **v3.0**   | Multi-Agent SOC      | Supervisor + sub-agent architecture                                                |
 
 ---
 
-*FlowRun Streamlet: IoC Triage — PRD v3 — Reconciled with codebase v0.0.31*
+*FlowRun Streamlet: IoC Triage — PRD v3 — Reconciled with codebase v0.0.32*

@@ -14,8 +14,8 @@ def main() -> None:
     print(
         "\n"
         "══════════════════════════════════════════════════════════\n"
-        "  🛡️  FlowRun Streamlet: IoC Triage — v0.0.31\n"
-        "  Built with LangGraph + LangChain + Arize AI\n"
+        "  🛡️  FlowRun Streamlet: IoC Triage — v0.0.32\n"
+        "  Built with LangGraph + LangChain + OpenTelemetry\n"
         "══════════════════════════════════════════════════════════\n"
     )
 
@@ -28,13 +28,13 @@ def main() -> None:
         print(f"\n❌ {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Step 2: Initialise Arize tracing
+    # Step 2: Initialise OpenTelemetry tracing
     from agent.tracing import init_tracing
-    tracer_provider = init_tracing()
-    if tracer_provider:
-        print("✅ Arize tracing initialised. Project: flowrun-streamlet-ioc-triage\n")
+    endpoint = init_tracing()
+    if endpoint:
+        print(f"✅ OpenTelemetry tracing initialised. Endpoint: {endpoint}\n")
     else:
-        print("⚠️  Arize tracing unavailable — triage will continue without tracing.\n")
+        print("⚠️  OpenTelemetry tracing unavailable — triage will continue without tracing.\n")
 
     # Step 3: Build LangGraph
     from agent.graph import build_graph

@@ -1,7 +1,7 @@
 # FlowRun Streamlet: IoC Triage — Entity Relationship Diagram
 
 > Rendered automatically by GitHub via [Mermaid](https://mermaid.js.org/).  
-> Every entity maps to a data structure in the live agent pipeline (v0.0.31).  
+> Every entity maps to a data structure in the live agent pipeline (v0.0.32).  
 > Relationships reflect how data flows through the LangGraph `AgentState` and its downstream consumers.
 
 ---
@@ -41,7 +41,7 @@ erDiagram
         bool    escalation_required    "Routes to escalation_gate if true"
         string  report_text            "CLI-formatted threat report"
         string  report_html            "Styled HTML report for Jupyter"
-        string  arize_trace_url        "Direct link to trace in Arize UI"
+        string  trace_endpoint         "OTLP endpoint where this run's spans were exported"
     }
 
     %% ══════════════════════════════════════════════════════════
@@ -140,25 +140,25 @@ erDiagram
     %% OBSERVABILITY ENTITIES
     %% ══════════════════════════════════════════════════════════
 
-    ARIZE_TRACE {
+    OTEL_TRACE {
         string   trace_id           "OTLP trace ID"
-        string   project_name       "flowrun-streamlet-ioc-triage"
-        datetime exported_at        "When trace was shipped via OTLP"
-        string   direct_url         "https://app.arize.com/... deep link"
+        string   service_name       "flowrun-streamlet-ioc-triage (resource attribute)"
+        datetime exported_at        "When trace was shipped via OTLP/HTTP"
+        string   otlp_endpoint      "Resolved OTLP destination, e.g. http://localhost:4318"
     }
 
-    ARIZE_SPAN {
+    OTEL_SPAN {
         string  span_id             "OTLP span ID"
         string  parent_span_id      "Null for root span"
         string  span_name           "flowrun.triage | flowrun.classify | langchain.tool | flowrun.correlate | flowrun.severity"
         string  span_type           "chain | llm | tool | custom"
         float   latency_ms          "Span duration"
-        json    attributes          "OpenInference span attributes"
+        json    attributes          "OpenTelemetry span attributes"
         string  status              "ok | error"
     }
 
     SPAN_ATTRIBUTE {
-        string  span_id             "FK to ARIZE_SPAN"
+        string  span_id             "FK to OTEL_SPAN"
         string  attribute_key       "e.g. ioc.type, tool.name, composite.score"
         string  attribute_value     "Serialised value"
         string  attribute_type      "string | float | bool | json"
@@ -249,14 +249,14 @@ erDiagram
     %% Triage run produces one threat report
     TRIAGE_RUN          ||--||  THREAT_REPORT       : "outputs"
 
-    %% Each triage run has one Arize trace
-    TRIAGE_RUN          ||--||  ARIZE_TRACE         : "is observed by"
+    %% Each triage run emits one OpenTelemetry trace
+    TRIAGE_RUN          ||--||  OTEL_TRACE          : "is observed by"
 
-    %% Arize trace contains multiple spans
-    ARIZE_TRACE         ||--o{  ARIZE_SPAN          : "contains"
+    %% OTEL trace contains multiple spans
+    OTEL_TRACE          ||--o{  OTEL_SPAN           : "contains"
 
     %% Each span has multiple attributes
-    ARIZE_SPAN          ||--o{  SPAN_ATTRIBUTE      : "carries"
+    OTEL_SPAN           ||--o{  SPAN_ATTRIBUTE      : "carries"
 
     %% Each triage run uses up to two LLM calls (classifier may be skipped by regex)
     TRIAGE_RUN          ||--o{  LLM_CALL            : "makes"
@@ -317,16 +317,16 @@ erDiagram
 
 | Entity | Maps To | Description |
 |---|---|---|
-| `ARIZE_TRACE` | One trace in Arize AI | Root trace created per run via `arize-otel` OTLP export. Uses `project_name` parameter. |
-| `ARIZE_SPAN` | Individual spans | Auto-instrumented (LangChain/LangGraph) + custom spans (flowrun.correlate, flowrun.severity) |
-| `SPAN_ATTRIBUTE` | `span.set_attribute(key, value)` | OpenInference-compliant attributes on each span |
+| `OTEL_TRACE` | One OpenTelemetry trace | Root trace created per run via the Traceloop SDK (OpenLLMetry) and exported via OTLP/HTTP. Default destination `http://localhost:4318`. |
+| `OTEL_SPAN` | Individual spans | Auto-instrumented (LangChain/LangGraph/OpenAI by Traceloop) + custom spans (`flowrun.correlate`, `flowrun.severity`) emitted via `opentelemetry.trace.get_tracer()` |
+| `SPAN_ATTRIBUTE` | `span.set_attribute(key, value)` | OpenTelemetry-compliant attributes on each span |
 
 ### LLM Configuration
 
 | Entity | Maps To | Description |
 |---|---|---|
 | `MODEL_CONFIG` | `MODEL_CONFIG` dict in `agent/llm.py` | Per-task model and temperature. GPT-4o-mini (classifier, temp=0.0) + GPT-4o (report, temp=0.3). |
-| `LLM_CALL` | LLM spans in Arize | Up to 2 calls per run: classifier (may be skipped if regex resolves type) and report |
+| `LLM_CALL` | LLM spans in the OTLP trace | Up to 2 calls per run: classifier (may be skipped if regex resolves type) and report |
 
 ### Package Ecosystem
 
@@ -371,4 +371,4 @@ erDiagram
 
 ---
 
-*FlowRun Streamlet: IoC Triage · ERD v3 · LangGraph + LangChain + OpenAI GPT-4o + Arize AI · Reconciled with codebase v0.0.31*
+*FlowRun Streamlet: IoC Triage · ERD v3 · LangGraph + LangChain + OpenAI GPT-4o + OpenTelemetry (Traceloop) · Reconciled with codebase v0.0.32*
